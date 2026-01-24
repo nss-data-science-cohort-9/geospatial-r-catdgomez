@@ -1,0 +1,119 @@
+---
+title: "cgd_exploration_geospatial_R"
+output: html_notebook
+---
+
+```{r}
+
+# install.packages("sf")
+# install.packages("leaflet")
+library(sf)
+library(tidyverse)
+library(leaflet)
+
+```
+
+# Analyzing Aggravated Burglaries in Davidson County
+### Part 1: Data Preparation
+
+I have been provided these three datasets for this project:
+
+1. burglaries_2023.csv: Contains data on the aggravated burglary incidents in Davidson County. This was obtained from https://data.nashville.gov/Police/Metro-Nashville-Police-Department-Incidents/2u6v-ujjs.
+```{r}
+# read the csv of burglaries data into the notebook
+
+burglary_incidents <- read_csv('../data/burglaries_2023.csv')
+
+# view the dataset
+
+burglary_incidents
+
+```
+```{r}
+
+# investgate the ethnicity column some
+
+unique(burglary_incidents[["victim_ethnicity"]])
+
+```
+```{r}
+
+```
+
+
+2. census.csv: Census tract level data on population and median income. This was obtained from the US Census American Community Survey.
+
+```{r}
+
+# read the csv of census data into the notebook
+
+census <- read_csv('../data/census.csv')
+
+# view the dataset
+
+census
+
+```
+
+
+3. DC: A shapefile containing Davidson County census tracts
+
+```{r}
+
+# read in the shape file data for Davidson county census tracts
+# read in the DC file data
+
+dav_cty_census_tracts <- read_sf('../data/DC/DC.shp')
+dav_cty_census_tracts
+```
+
+Perform a spatial join to determine the census tract in which each burglary occurred. Hint: You may want to make use of the st_as_sf function in order to convert the burglaries data into an sf object.
+
+```{r}
+
+# performed spatial join 
+
+burglary_incidents_mapped <- st_as_sf(
+  burglary_incidents |> 
+    drop_na(latitude) |> 
+    drop_na(longitude),
+    coords = c('longitude', 'latitude'),
+    crs = st_crs(dav_cty_census_tracts)
+)
+
+burglary_incidents_mapped
+
+```
+
+Merge census csv data with dav_cty_census_tracts DC shape file data.
+
+```{r}
+
+# dav_cty_census_tracts |>
+#   
+# 
+# merge(census, dav_cty_census_tracts, by.x = "tract", by.y = "TRACTCE")
+
+```
+
+After performing the spatial join, merge in the census data. Note: Make sure that the final dataset contains all census tracts, even those with zero burglaries.
+
+```{r}
+
+# class(census)
+# # class(burglary_incidents_mapped)
+# 
+# st_join(census, burglary_incidents_mapped, left=TRUE)
+# # merge(census, burglary_incidents_mapped, all = TRUE)
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+
