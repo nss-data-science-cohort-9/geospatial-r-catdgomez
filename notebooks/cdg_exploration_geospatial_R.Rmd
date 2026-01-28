@@ -65,7 +65,20 @@ census
 
 dav_cty_census_tracts <- read_sf('../data/DC/DC.shp')
 dav_cty_census_tracts
+
 ```
+```{r}
+dav_cty_census_tracts |> 
+  ggplot() +
+  geom_sf()
+```
+```{r}
+dav_cty_census_tracts |> 
+  ggplot() +
+  geom_sf(aes(fill = ALAND))
+```
+
+
 
 Perform a spatial join to determine the census tract in which each burglary occurred. Hint: You may want to make use of the st_as_sf function in order to convert the burglaries data into an sf object.
 
@@ -85,18 +98,26 @@ burglary_incidents_mapped
 
 ```
 
-Merge census csv data with dav_cty_census_tracts DC shape file data.
+
+Rename column in Davidson county census tract data so that the merge goes more smoothly.
 
 ```{r}
 
-# dav_cty_census_tracts |>
-#   
-# 
-# merge(census, dav_cty_census_tracts, by.x = "tract", by.y = "TRACTCE")
+dav_cty_census_tracts <- rename(dav_cty_census_tracts, tract_name = NAME)
 
 ```
 
+Merge census csv data with dav_cty_census_tracts DC shape file data.
+
 After performing the spatial join, merge in the census data. Note: Make sure that the final dataset contains all census tracts, even those with zero burglaries.
+
+```{r}
+
+merge(census, dav_cty_census_tracts, by.x = "tract", by.y = "TRACTCE", all = TRUE)
+
+```
+
+
 
 ```{r}
 
