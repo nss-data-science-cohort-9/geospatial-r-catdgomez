@@ -29,14 +29,19 @@ burglary_incidents <- read_csv('../data/burglaries_2023.csv')
 burglary_incidents
 
 ```
+
+Investigate the ethnicity column some: 
+
 ```{r}
 
-# investgate the ethnicity column some
+# investigate the ethnicity column some
 
 unique(burglary_incidents[["victim_ethnicity"]])
 
 ```
 ```{r}
+
+
 
 ```
 
@@ -66,6 +71,7 @@ census
 dav_cty_census_tracts <- read_sf('../data/DC/DC.shp')
 dav_cty_census_tracts
 
+burglary_incidents
 ```
 ```{r}
 dav_cty_census_tracts |> 
@@ -86,6 +92,8 @@ Perform a spatial join to determine the census tract in which each burglary occu
 
 # performed spatial join 
 
+burglary_incidents
+
 burglary_incidents_mapped <- st_as_sf(
   burglary_incidents |> 
     drop_na(latitude) |> 
@@ -96,8 +104,8 @@ burglary_incidents_mapped <- st_as_sf(
 
 burglary_incidents_mapped
 
-```
 
+```
 
 Rename column in Davidson county census tract data so that the merge goes more smoothly.
 
@@ -107,13 +115,133 @@ dav_cty_census_tracts <- rename(dav_cty_census_tracts, tract_name = NAME)
 
 ```
 
+
 Merge census csv data with dav_cty_census_tracts DC shape file data.
+
+
+```{r}
+
+census_tracts <- merge(dav_cty_census_tracts, census, by.x = "TRACTCE", by.y = "tract", all = TRUE)
+
+census_tracts
+# burglary_incidents_mapped
+
+```
+
+```{r}
+
+census_tracts |> 
+  ggplot() +
+  geom_sf()
+
+```
+
+```{r}
+
+burglary_incidents_mapped_filtered <- st_filter(burglary_incidents_mapped, census_tracts)
+
+```
+
+
+```{r}
+
+
+census_tracts |> 
+   ggplot() +
+   geom_sf() +
+   geom_sf(data = burglary_incidents_mapped_filtered, size = 0.1)
+
+
+
+
+```
+
 
 After performing the spatial join, merge in the census data. Note: Make sure that the final dataset contains all census tracts, even those with zero burglaries.
 
 ```{r}
 
-merge(census, dav_cty_census_tracts, by.x = "tract", by.y = "TRACTCE", all = TRUE)
+burglary_census_combo <- st_join(burglary_incidents_mapped, census_tracts, join = st_within, left=FALSE)
+
+
+```
+
+
+```{r}
+
+burglary_census_combo
+
+```
+
+
+### Part 2: Exploratory Analysis
+
+Perform some exploratory analysis on your prepared dataset.
+
+Classes of the two datasets:
+
+```{r}
+
+class(census_tracts)
+class(burglary_census_combo)
+
+```
+
+Curious as to the highest number of victims in one burglary.
+
+```{r}
+
+burglary_census_combo |>
+  filter(victim_number == max(victim_number, na.rm = TRUE))
+
+```
+Limit dataset to non repeated incident numbers and locate the highest number of victims per indcident number. 
+
+```{r}
+
+real_num_burglaries <- burglary_census_combo |>
+  group_by(incident_number) |>
+  filter(victim_number == max(victim_number, na.rm = TRUE)) |>
+  arrange(desc(victim_number))
+
+real_num_burglaries
+
+```
+Calculate the accurate number of burglaries in each tract.
+
+
+```{r}
+
+burglaries_per_tract_real <- real_num_burglaries |> 
+  st_drop_geometry() |> 
+  group_by(TRACTCE) |> 
+  count(name = "num_burglaries") |> 
+  arrange(desc(num_burglaries))
+
+burglaries_per_tract_real
+
+```
+Comparing the non filtered number to the result before filtering:
+
+
+```{r}
+
+burglaries_per_tract <- burglary_census_combo |> 
+  st_drop_geometry() |> 
+  group_by(TRACTCE) |> 
+  count(name = "num_burglaries") |> 
+  arrange(desc(num_burglaries))
+
+burglaries_per_tract
+
+```
+
+Aggregate the data by census tract. Warning: each incident can appear multiple times if there are multiple victims, so be sure that you aren't double-counting any incidents.
+
+
+```{r}
+
+burglaries_per_tract_real
 
 ```
 
@@ -121,11 +249,35 @@ merge(census, dav_cty_census_tracts, by.x = "tract", by.y = "TRACTCE", all = TRU
 
 ```{r}
 
-# class(census)
-# # class(burglary_incidents_mapped)
-# 
-# st_join(census, burglary_incidents_mapped, left=TRUE)
-# # merge(census, burglary_incidents_mapped, all = TRUE)
+
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
 
 ```
 
