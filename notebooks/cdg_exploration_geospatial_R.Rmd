@@ -1,6 +1,8 @@
 ---
 title: "cgd_exploration_geospatial_R"
-output: html_notebook
+output:
+  html_document:
+    df_print: paged
 ---
 
 ```{r}
@@ -39,11 +41,6 @@ Investigate the ethnicity column some:
 unique(burglary_incidents[["victim_ethnicity"]])
 
 ```
-```{r}
-
-
-
-```
 
 
 2. census.csv: Census tract level data on population and median income. This was obtained from the US Census American Community Survey.
@@ -59,6 +56,15 @@ census <- read_csv('../data/census.csv')
 census
 
 ```
+```{r}
+
+sort(unique(census[["tract"]]))
+
+```
+```{r}
+sort(unique(dav_cty_census_tracts[["TRACTCE"]]))
+
+```
 
 
 3. DC: A shapefile containing Davidson County census tracts
@@ -71,7 +77,7 @@ census
 dav_cty_census_tracts <- read_sf('../data/DC/DC.shp')
 dav_cty_census_tracts
 
-burglary_incidents
+# burglary_incidents
 ```
 ```{r}
 dav_cty_census_tracts |> 
@@ -123,7 +129,7 @@ Merge census csv data with dav_cty_census_tracts DC shape file data.
 
 census_tracts <- merge(dav_cty_census_tracts, census, by.x = "TRACTCE", by.y = "tract", all = TRUE)
 
-census_tracts
+census_tracts |> view()
 # burglary_incidents_mapped
 
 ```
@@ -138,7 +144,7 @@ census_tracts |>
 
 ```{r}
 
-burglary_incidents_mapped_filtered <- st_filter(burglary_incidents_mapped, census_tracts)
+# burglary_incidents_mapped_filtered <- st_filter(burglary_incidents_mapped, census_tracts)
 
 ```
 
@@ -149,7 +155,7 @@ burglary_incidents_mapped_filtered <- st_filter(burglary_incidents_mapped, censu
 census_tracts |> 
    ggplot() +
    geom_sf() +
-   geom_sf(data = burglary_incidents_mapped_filtered, size = 0.1)
+   geom_sf(data = burglary_incidents_mapped, size = 0.1)
 
 
 
@@ -166,6 +172,13 @@ burglary_census_combo <- st_join(burglary_incidents_mapped, census_tracts, join 
 
 ```
 
+```{r}
+census_tracts |> 
+   ggplot() +
+   geom_sf() +
+   geom_sf(data = burglary_census_combo, size = 0.1)
+
+```
 
 ```{r}
 
@@ -245,17 +258,79 @@ burglaries_per_tract_real
 
 ```
 
+Which census tract had the highest number of burglaries? 
+
+```{r}
+
+burglaries_per_tract_real[1,]
+
+```
 
 
 ```{r}
 
+burglary_census_combo_latlong <- burglary_census_combo %>%
+    mutate(long = unlist(map(burglary_census_combo$geometry,1)),
+           lat = unlist(map(burglary_census_combo$geometry,2)))
 
+burglary_census_combo_latlong
 
 ```
+
 
 ```{r}
 
+# real_num_burglaries
+# burglary_census_combo
+# burglary_incidents_mapped_filtered
+
+leaflet(data = burglary_census_combo_latlong |> 
+          drop_na(lat) |>
+          filter(`TRACTCE` == "016000")
+        ) |> 
+  addTiles() |>
+  addMarkers(~long,
+             ~lat,
+             popup = ~as.character(`victim_number`),
+             label = ~as.character(`victim_number`)
+             )
 ```
+
+
+
+```{r}
+
+tract_num = "016000"
+
+census_tracts |> 
+   filter(TRACTCE == tract_num) |> 
+   ggplot() +
+   geom_sf() +
+   geom_sf(data =  burglary_census_combo_latlong |> filter(TRACTCE == tract_num),
+          aes(color = `incident_number`))
+
+
+```
+
+Which census tract had the highest number of burglaries per 1000 residents?
+
+
+```{r}
+# dividing the number of victims in the specified population 
+# by the total number of persons in the population and 
+# multiplying the rate by 1,000.
+
+highest_burgs_per_pop <- real_num_burglaries |>
+  mutate(high_burg_per_pop = 1000*(victim_number/population)) |>
+  arrange(desc(high_burg_per_pop))
+
+
+highest_burgs_per_pop$TRACTCE[1]
+
+```
+
+
+We're interested in the relationship between median income and number of aggravated burglaries, so examine those variables on their own and together to see what you can find. You may want to perform additional calculations, create plots, etc.
 
 ```{r}
 
