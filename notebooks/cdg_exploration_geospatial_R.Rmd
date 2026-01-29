@@ -129,7 +129,7 @@ Merge census csv data with dav_cty_census_tracts DC shape file data.
 
 census_tracts <- merge(dav_cty_census_tracts, census, by.x = "TRACTCE", by.y = "tract", all = TRUE)
 
-census_tracts |> view()
+census_tracts
 # burglary_incidents_mapped
 
 ```
@@ -173,6 +173,7 @@ burglary_census_combo <- st_join(burglary_incidents_mapped, census_tracts, join 
 ```
 
 ```{r}
+
 census_tracts |> 
    ggplot() +
    geom_sf() +
@@ -286,7 +287,7 @@ burglary_census_combo_latlong
 
 leaflet(data = burglary_census_combo_latlong |> 
           drop_na(lat) |>
-          filter(`TRACTCE` == "016000")
+         filter(`TRACTCE` == "016000")
         ) |> 
   addTiles() |>
   addMarkers(~long,
@@ -301,13 +302,20 @@ leaflet(data = burglary_census_combo_latlong |>
 ```{r}
 
 tract_num = "016000"
+# library(magrittr)
+# df %<>%
+#    mutate(size = factor(size))
+
+# burglary_census_combo_latlong <- burglary_census_combo_latlong |>
+#   mutate(incident_number = factor(incident_number))
 
 census_tracts |> 
    filter(TRACTCE == tract_num) |> 
    ggplot() +
    geom_sf() +
-   geom_sf(data =  burglary_census_combo_latlong |> filter(TRACTCE == tract_num),
-          aes(color = `incident_number`))
+   geom_sf(data =  burglary_census_combo_latlong |>
+             filter(TRACTCE == tract_num),
+           aes(color = as.character(`incident_number`)))
 
 
 ```
@@ -334,13 +342,90 @@ We're interested in the relationship between median income and number of aggrava
 
 ```{r}
 
+
+burglary_census_combo_latlong$income_level <- with(burglary_census_combo_latlong, factor(
+                            findInterval(median_income, c(-Inf,
+                               quantile(median_income, probs=c(0.25, .5, .75)), Inf)), 
+                            labels=c("lowest","low","medium", "high")
+      ))
+
+
+unique(burglary_census_combo_latlong[["income_level"]])
+
+burglary_census_combo_latlong
+
 ```
 
 ```{r}
 
+burgs_num_per_tract_real <- merge(census, burglaries_per_tract_real, by.x="tract", by.y="TRACTCE", all.x=TRUE) #- pop and median income data - 
+burgs_num_per_tract_real
 ```
 
 ```{r}
+burgs_num_per_tract_real_pos <- burgs_num_per_tract_real |>
+  filter(median_income >= 0)
+
+burgs_num_per_tract_real_pos
+```
+
+# Part 3: Statistical Modeling
+
+Fit a Poisson regression model with target variable the rate of burglaries per census tract and with predictor the median income. Offset using the log of the population so that we are looking at the rate of burglaries per population instead of the number of burglaries. How can you interpret the meaning of the output? How do the estimates from the model compare to the observed data?
+
+```{r}
+
+# burg_median_income_lr <- glm(incident_number ~ median_income, data = burglary_census_combo_latlong)
+# summary(burg_median_income_lr)
+
+
+
+```
+
+
+
+```{r}
+
+burg_median_income_lr <- glm(
+  num_burglaries ~ median_income,
+  data = burgs_num_per_tract_real_pos,
+  family = 'poisson',
+  offset=log(population)
+)
+summary(burg_median_income_lr)
+
+```
+
+Interpret the coefficient you get for median_income
+Hint: You can use the coef function to extract the coefficients from a model.
+
+```{r}
+
+burg_median_income_lr |> coef() |> exp()
+
+```
+
+```{r}
+ 
+# Baby’s birthweight = Intercept(based on mother’s race) + β
+#  * mother’s age
+# 
+# 
+# Essentially you’re saying that your data is broken down into 3 racial groups, and you want to model your data as having the same slope governing how birthweight changes with mother’s age, but potentially different intercepts. Here’s a picture of what’s happening.
+# 
+# # Calculate race-specific intercepts
+# intercepts <- c(coef(birthwt.lm)["(Intercept)"],
+#                 coef(birthwt.lm)["(Intercept)"] + coef(birthwt.lm)["raceother"],
+#                 coef(birthwt.lm)["(Intercept)"] + coef(birthwt.lm)["racewhite"])
+# 
+# lines.df <- data.frame(intercepts = intercepts,
+#                        slopes = rep(coef(birthwt.lm)["mother.age"], 3),
+#                        race = levels(birthwt$race))
+# 
+# qplot(x = mother.age, y = birthwt.grams, color = race, data = birthwt) + 
+#   geom_abline(aes(intercept = intercepts, 
+#                   slope = slopes, 
+#                   color = race), data = lines.df)
 
 ```
 
