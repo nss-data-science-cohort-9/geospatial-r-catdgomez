@@ -9,6 +9,7 @@ output:
 
 # install.packages("sf")
 # install.packages("leaflet")
+# install.packages("jtools")
 library(sf)
 library(tidyverse)
 library(leaflet)
@@ -378,11 +379,20 @@ Fit a Poisson regression model with target variable the rate of burglaries per c
 # burg_median_income_lr <- glm(incident_number ~ median_income, data = burglary_census_combo_latlong)
 # summary(burg_median_income_lr)
 
+burgs_num_per_tract_real_pos$income_level <- with(burgs_num_per_tract_real_pos, factor(
+                            findInterval(median_income, c(-Inf,
+                               quantile(median_income, probs=c(0.25, .5, .75)), Inf)), 
+                            labels=c("lowest","low","medium", "high")
+      ))
 
 
+unique(burgs_num_per_tract_real_pos[["income_level"]])
+
+# burglary_census_combo_latlong
+burgs_num_per_tract_real_pos
 ```
 
-
+How can you interpret the meaning of the output? Lower income tracts have higher numbers of burglaries. The higher the income level the less likely it is to have as many burglaries. 
 
 ```{r}
 
@@ -407,46 +417,108 @@ burg_median_income_lr |> coef() |> exp()
 
 ```{r}
  
-# Baby’s birthweight = Intercept(based on mother’s race) + β
-#  * mother’s age
-# 
-# 
-# Essentially you’re saying that your data is broken down into 3 racial groups, and you want to model your data as having the same slope governing how birthweight changes with mother’s age, but potentially different intercepts. Here’s a picture of what’s happening.
-# 
-# # Calculate race-specific intercepts
-# intercepts <- c(coef(birthwt.lm)["(Intercept)"],
-#                 coef(birthwt.lm)["(Intercept)"] + coef(birthwt.lm)["raceother"],
-#                 coef(birthwt.lm)["(Intercept)"] + coef(birthwt.lm)["racewhite"])
-# 
-# lines.df <- data.frame(intercepts = intercepts,
-#                        slopes = rep(coef(birthwt.lm)["mother.age"], 3),
-#                        race = levels(birthwt$race))
-# 
-# qplot(x = mother.age, y = birthwt.grams, color = race, data = birthwt) + 
-#   geom_abline(aes(intercept = intercepts, 
-#                   slope = slopes, 
-#                   color = race), data = lines.df)
+burg_median_income_lvl_lr <- glm(
+  num_burglaries ~ income_level,
+  data = burgs_num_per_tract_real_pos,
+  family = 'poisson',
+  offset=log(population)
+)
+summary(burg_median_income_lvl_lr)
 
 ```
 
 ```{r}
 
-```
+burgs_num_per_tract_real_pos
 
-```{r}
+burgs_num_per_tract_real_pos |>
+    ggplot(aes(x = num_burglaries)) +
+    geom_bar() + #fill = "#756bb1") +
+    labs(x = "Number of Burglaries", y= "Frequency of burglaries", title = "")
 
-```
 
-```{r}
 
-```
-
-```{r}
 
 ```
 
 ```{r}
 
+ 
+
+hist(burgs_num_per_tract_real_pos$median_income) 
+hist(burgs_num_per_tract_real_pos$num_burglaries) 
 ```
 
+```{r}
+
+
+
+library(jtools)
+effect_plot(burg_median_income_lr, pred = median_income, interval = TRUE, plot.points = TRUE, 
+             jitter = 0.05)
+
+```
+
+```{r}
+
+plot_summs(burg_median_income_lvl_lr)
+
+```
+
+```{r}
+
+plot_summs(burg_median_income_lvl_lr, inner_ci_level = .9)
+
+```
+
+```{r}
+
+library(ggeffects)
+ggpredict(burg_median_income_lr, terms = "median_income") |> 
+  plot()
+
+```
+```{r}
+ggpredict(burg_median_income_real_lr, terms = "median_income") |> 
+  plot()
+```
+```{r}
+ggpredict(burg_median_income_lvl_lr, terms = "income_level") |> 
+  plot()
+```
+
+
+```{r}
+
+leaflet(burglary_census_combo_latlong |> drop_na(long)) %>% 
+  addTiles() %>% 
+  addMarkers(
+    ~long,
+    ~lat,
+    popup = ~as.character(`income_level`),
+    label = ~as.character(`victim_number`),
+    clusterOptions = markerClusterOptions()
+  )
+
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
 
