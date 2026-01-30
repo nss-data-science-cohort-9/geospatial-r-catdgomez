@@ -106,7 +106,8 @@ burglary_incidents_mapped <- st_as_sf(
     drop_na(latitude) |> 
     drop_na(longitude),
     coords = c('longitude', 'latitude'),
-    crs = st_crs(dav_cty_census_tracts)
+    crs = st_crs(dav_cty_census_tracts),
+    remove = FALSE
 )
 
 burglary_incidents_mapped
@@ -169,7 +170,6 @@ After performing the spatial join, merge in the census data. Note: Make sure tha
 ```{r}
 
 burglary_census_combo <- st_join(burglary_incidents_mapped, census_tracts, join = st_within, left=FALSE)
-
 
 ```
 
@@ -303,12 +303,6 @@ leaflet(data = burglary_census_combo_latlong |>
 ```{r}
 
 tract_num = "016000"
-# library(magrittr)
-# df %<>%
-#    mutate(size = factor(size))
-
-# burglary_census_combo_latlong <- burglary_census_combo_latlong |>
-#   mutate(incident_number = factor(incident_number))
 
 census_tracts |> 
    filter(TRACTCE == tract_num) |> 
@@ -329,12 +323,17 @@ Which census tract had the highest number of burglaries per 1000 residents?
 # by the total number of persons in the population and 
 # multiplying the rate by 1,000.
 
+# scatter plot with burgs per 1000 people
+# predict function using 1000 people as pop and 
+# get rid of neg numbers
+
+
 highest_burgs_per_pop <- real_num_burglaries |>
   mutate(high_burg_per_pop = 1000*(victim_number/population)) |>
   arrange(desc(high_burg_per_pop))
 
-
-highest_burgs_per_pop$TRACTCE[1]
+highest_burgs_per_pop
+# highest_burgs_per_pop$TRACTCE[1]
 
 ```
 
@@ -399,7 +398,7 @@ How can you interpret the meaning of the output? Lower income tracts have higher
 burg_median_income_lr <- glm(
   num_burglaries ~ median_income,
   data = burgs_num_per_tract_real_pos,
-  family = 'poisson',
+  family = poisson,
   offset=log(population)
 )
 summary(burg_median_income_lr)
@@ -434,7 +433,7 @@ burgs_num_per_tract_real_pos
 burgs_num_per_tract_real_pos |>
     ggplot(aes(x = num_burglaries)) +
     geom_bar() + #fill = "#756bb1") +
-    labs(x = "Number of Burglaries", y= "Frequency of burglaries", title = "")
+    labs(x = "Number of Burglaries", y= "Frequency of census tracts with num of burgs", title = "")
 
 
 
@@ -504,21 +503,101 @@ leaflet(burglary_census_combo_latlong |> drop_na(long)) %>%
 
 
 ```{r}
+
+predict(burg_median_income_lvl_lr, newdata = tibble(income_level = c("lowest", "low", "medium", "high"), population = c(100, 500, 1000, 5000)), type="response") 
+
+
+```
+```{r}
+
+
+
 ```
 
 
 ```{r}
+burgs_num_per_tract_real_pos
 ```
 
 
 ```{r}
+
+# scatter plot with burgs per 1000 people
+# predict function using 1000 people as pop and 
+# get rid of neg numbers
+
+
+
+
+highest_burgs_per_pop <- real_num_burglaries |>
+  mutate(high_burg_per_pop = 1000*(victim_number/population)) |>
+  arrange(desc(high_burg_per_pop))
+
+highest_burgs_per_pop_pos <- highest_burgs_per_pop |>
+  filter(median_income >= 0)
+# highest_burgs_per_pop$TRACTCE[1]
+
+# burgs_num_per_tract_real_pos <- burgs_num_per_tract_real |>
+#   filter(median_income >= 0)
+# 
+# burgs_num_per_tract_real_pos
+burgs_num_per_tract_real
+highest_burgs_per_pop_pos
+```
+```{r}
+
+burg_nums_pop_median_income <- merge(burgs_num_per_tract_real, highest_burgs_per_pop_pos, by.x=c("tract", "median_income", "population"), by.y=c("TRACTCE", "median_income", "population"), all.x=TRUE) 
+
+# burg_median_income_lr <- glm(
+#   num_burglaries ~ median_income,
+#   data = burg_nums_pop_median_income,
+#   family = 'poisson',
+#   offset=log(population)
+# )
+# summary(burg_median_income_lr)
+
+```
+```{r}
+
+
+# burg_median_income_lr <- glm(
+#   num_burglaries ~ median_income,
+#   data = burgs_num_per_tract_real_pos,
+#   family = 'poisson',
+#   offset=log(population)
+# )
+# summary(burg_median_income_lr)
+
+# burgs_num_per_tract_pop <- glm(
+#   num_burglaries ~ median_income,
+#   data = burg_nums_pop_median_income,
+#   family = 'poisson',
+#   offset=log(population)
+# )
+# summary(burgs_num_per_tract_pop)
+```
+
+
+
+
+```{r}
+
+# burgs_num_per_tract_pop <- glm(
+#   high_burg_per_pop ~ median_income,
+#   data = highest_burgs_per_pop_pos,
+#   family = 'poisson',
+#   offset=log(population)
+# )
+# summary(burgs_num_per_tract_pop)
+
+# predict(highest_burgs_per_pop_pos, newdata = tibble(median_income, population =100), type="response") 
+
 ```
 
 
 ```{r}
-```
 
 
-```{r}
+
 ```
 
